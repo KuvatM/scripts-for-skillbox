@@ -212,6 +212,7 @@ while true; do
     #---Input-SSH---
     iptables_add INPUT -p tcp --dport 1870 -j ACCEPT -m comment --comment ssh
     iptables -A OUTPUT -p tcp --dport 22 -m comment --comment "allow ssh to github" -j ACCEPT
+    iptables -A OUTPUT -p tcp --dport 1870 -m comment --comment "ssh-out" -j ACCEPT
     #---Output-HTTP---
     iptables_add OUTPUT -p tcp -m multiport --dports 443,80 -j ACCEPT
     #---ESTABLISHED---
