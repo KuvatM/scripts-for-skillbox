@@ -41,12 +41,33 @@ username_request() {
   done
 }
 
+# функция, которая выполняет backup файла путем копирования его и модификации названия
+bkp() {
+  if [ -f "$1" ]; then
+    cp "$1" "$1".bkp
+  fi
+}
+
+# функция, которая восстанавливает файл из backup
+restore_bkp() {
+  if [ -f "$1".bkp ]; then
+    if [ -f "$1" ]; then
+      rm "$1" && mv "$1".bkp "$1"
+    else
+      mv "$1".bkp "$1"
+    fi
+  else
+    echo -e "\nCan't find backup file!\n"
+  fi
+}
+
 # функция, которая проверяет наличие правила в iptables и в случае отсутствия применяет его
 iptables_add() {
   if ! iptables -C "$@" &>/dev/null; then
     iptables -A "$@"
   fi
 }
+
 
 # настроим часовой пояс
 echo -e "\n====================\nSetting timezone\n===================="
@@ -93,13 +114,7 @@ while true; do
     echo -e "\n\nDONE\n"
     # Дополнительно настраиваем SSH-сервис и права
     
-    echo -e "\n====================\nДополнительная SSH-настройка\n===================="
-
-    # отключаем и останавливаем socket-юнит, включаем обычный сервис
-    systemctl disable ssh.socket
-    systemctl stop ssh.socket
-    systemctl enable ssh
-    systemctl restart ssh
+    
 
     # копируем ключи от другого пользователя, если требуется (пример: ubuntu → $username)
     if [ -f /home/ubuntu/.ssh/authorized_keys ]; then
@@ -170,6 +185,14 @@ while true; do
   esac
 done
 
+echo -e "\n====================\nДополнительная SSH-настройка\n===================="
+
+    # отключаем и останавливаем socket-юнит, включаем обычный сервис
+    systemctl disable ssh.socket
+    systemctl stop ssh.socket
+    systemctl enable ssh
+    systemctl restart ssh
+
 # выключим ipv6
 echo -e "\n====================\nDisabling ipv6\n===================="
 
@@ -181,6 +204,75 @@ while true; do
     sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="/&ipv6.disable=1 /' /etc/default/grub
     sed -i 's/^GRUB_CMDLINE_LINUX="/&ipv6.disable=1 /' /etc/default/grub
     update-grub
+    echo -e "\nDONE\n"
+    break
+    ;;
+
+  [Ss]*)
+    echo -e "\n"
+    break
+    ;;
+  *) echo -e "\nPlease answer C or S!\n" ;;
+  esac
+done
+
+
+# подключим репозиторий
+echo -e "\n====================\nRepo config\n===================="
+
+while true; do
+  read -r -n 1 -p "Continue or Skip? (c|s) " cs
+  echo -e "\n"
+  case $cs in
+  [Cc]*)
+    # выполним backup файлов с помощью функции bkp
+    bkp /etc/apt/sources.list.d/own_repo.list
+    bkp /etc/apt/auth.conf
+
+    # запросим логин и пароль для подключения к репозиторию
+    read -r -p $'\n\n'"login for repo.justnikobird.ru: " repo_login
+    read -r -p "password for repo.justnikobird.ru: " -s repo_pass
+
+    # проверим файл /etc/apt/sources.list.d/own_repo.list на наличие записи о репозитории, и в случае ее отсутствия добавим
+    if ! grep -Fxq "deb https://repo.justnikobird.ru:1111/lab focal main" /etc/apt/sources.list.d/own_repo.list &>/dev/null; then
+      echo "deb https://repo.justnikobird.ru:1111/lab focal main" | tee -a /etc/apt/sources.list.d/own_repo.list >/dev/null
+    fi
+
+    # проверим файл /etc/apt/auth.conf на наличие записей о репозитории, и в случае их отсутствия добавим
+    if ! grep -Fxq "machine repo.justnikobird.ru:1111" /etc/apt/auth.conf &>/dev/null; then
+      echo -e "machine repo.justnikobird.ru:1111\nlogin $repo_login\npassword $repo_pass" | tee -a /etc/apt/auth.conf >/dev/null
+    else
+      # если в файле /etc/apt/auth.conf записи обнаружены, то попросим пользователя удалить их
+      echo -e "\n\nrepo.justnikobird.ru has been configured in /etc/apt/auth.conf!\nPlease manually clean configuration or skip this stage."
+      restore_bkp /etc/apt/sources.list.d/own_repo.list
+      restore_bkp /etc/apt/auth.conf
+      exit 1
+    fi
+
+    # скачаем и установим gpg-ключ от репозитория
+    if ! wget --no-check-certificate -P ~/ https://"$repo_login":"$repo_pass"@repo.justnikobird.ru:1111/lab/labtest.asc; then
+      restore_bkp /etc/apt/sources.list.d/own_repo.list
+      restore_bkp /etc/apt/auth.conf
+      exit 1
+    else
+      apt-key add ~/labtest.asc
+    fi
+
+    # скачаем и установим открытый ключ ca-сертификата от репозитория
+    if ! wget --no-check-certificate -P /usr/local/share/ca-certificates/ https://"$repo_login":"$repo_pass"@repo.justnikobird.ru:1111/lab/ca.crt; then
+      restore_bkp /etc/apt/sources.list.d/own_repo.list
+      restore_bkp /etc/apt/auth.conf
+      exit 1
+    else
+      update-ca-certificates
+    fi
+
+    # выполним синхронизацию списков пакетов в системе
+    if ! apt update; then
+      restore_bkp /etc/apt/sources.list.d/own_repo.list
+      restore_bkp /etc/apt/auth.conf
+      exit 1
+    fi
     echo -e "\nDONE\n"
     break
     ;;
@@ -209,6 +301,8 @@ while true; do
     #---loopback---
     iptables_add OUTPUT -o lo -j ACCEPT
     iptables_add INPUT -i lo -j ACCEPT
+    #---REPO---
+    iptables_add OUTPUT -p tcp --dport 1111 -j ACCEPT -m 
     #---Input-SSH---
     iptables_add INPUT -p tcp --dport 1870 -j ACCEPT -m comment --comment ssh
     iptables -A OUTPUT -p tcp --dport 22 -m comment --comment "allow ssh to github" -j ACCEPT
@@ -241,12 +335,5 @@ done
 
 echo -e "\nOK\n"
 exit 0
-sudo service ssh restart
-sudo systemctl disable ssh.socket
-sudo systemctl stop ssh.socket
-sudo systemctl enable ssh
-sudo cp /home/ubuntu/.ssh/authorized_keys /home/kuvat/.ssh/
-sudo chown -R kuvat:kuvat /home/kuvat/.ssh
-sudo chmod 700 /home/kuvat/.ssh
-sudo chmod 600 /home/kuvat/.ssh/authorized_keyssudo systemctl restart ssh
+
 
