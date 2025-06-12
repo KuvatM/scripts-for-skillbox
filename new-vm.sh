@@ -234,13 +234,13 @@ while true; do
     read -r -p "password for repo: " -s repo_pass
 
     # проверим файл /etc/apt/sources.list.d/own_repo.list на наличие записи о репозитории, и в случае ее отсутствия добавим
-    if ! grep -Fxq "deb https://44.211.198.22:1111/lab focal main" /etc/apt/sources.list.d/own_repo.list &>/dev/null; then
-      echo "deb https://44.211.198.22:1111/lab focal main" | tee -a /etc/apt/sources.list.d/own_repo.list >/dev/null
+    if ! grep -Fxq "deb https://52.23.248.123:1111/lab focal main" /etc/apt/sources.list.d/own_repo.list &>/dev/null; then
+      echo "deb https://52.23.248.123:1111/lab focal main" | tee -a /etc/apt/sources.list.d/own_repo.list >/dev/null
     fi
 
     # проверим файл /etc/apt/auth.conf на наличие записей о репозитории, и в случае их отсутствия добавим
-    if ! grep -Fxq "machine 44.211.198.22:1111" /etc/apt/auth.conf &>/dev/null; then
-      echo -e "machine 44.211.198.22:1111\nlogin $repo_login\npassword $repo_pass" | tee -a /etc/apt/auth.conf >/dev/null
+    if ! grep -Fxq "machine 52.23.248.123:1111" /etc/apt/auth.conf &>/dev/null; then
+      echo -e "machine 52.23.248.123:1111\nlogin $repo_login\npassword $repo_pass" | tee -a /etc/apt/auth.conf >/dev/null
     else
       # если в файле /etc/apt/auth.conf записи обнаружены, то попросим пользователя удалить их
       echo -e "\n\nrepo has been configured in /etc/apt/auth.conf!\nPlease manually clean configuration or skip this stage."
@@ -250,7 +250,7 @@ while true; do
     fi
 
     # скачаем и установим gpg-ключ от репозитория
-    if ! wget --no-check-certificate -P ~/ https://"$repo_login":"$repo_pass"@44.211.198.22:1111/lab/labtest.asc; then
+    if ! wget --no-check-certificate -P ~/ https://"$repo_login":"$repo_pass"@52.23.248.123:1111/lab/labtest.asc; then
       restore_bkp /etc/apt/sources.list.d/own_repo.list
       restore_bkp /etc/apt/auth.conf
       exit 1
@@ -259,7 +259,7 @@ while true; do
     fi
 
     # скачаем и установим открытый ключ ca-сертификата от репозитория
-    if ! wget --no-check-certificate -P /usr/local/share/ca-certificates/ https://"$repo_login":"$repo_pass"@44.211.198.22:1111/lab/ca.crt; then
+    if ! wget --no-check-certificate -P /usr/local/share/ca-certificates/ https://"$repo_login":"$repo_pass"@52.23.248.123:1111/lab/ca.crt; then
       restore_bkp /etc/apt/sources.list.d/own_repo.list
       restore_bkp /etc/apt/auth.conf
       exit 1
@@ -335,5 +335,4 @@ done
 
 echo -e "\nOK\n"
 exit 0
-
 
