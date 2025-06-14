@@ -54,7 +54,7 @@ path_request() {
 }
 
 # установим все необходимые пакеты используя функцию command_check
-systemctl restart systemd-timesyncd.service
+
 apt-get update
 command_check iptables "Iptables" iptables
 command_check netfilter-persistent "Netfilter-persistent" iptables-persistent
