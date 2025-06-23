@@ -223,7 +223,7 @@ while true; do
 
     # запустим скрипт для генерации клиентского конфигурационного файла
     read -r -p $'\n'"Client name: " client_name
-    if /etc/openvpn/clients_config/make_config.sh "$client_crt_file" "$client_key_file" "$client_name"; then
+    if /etc/openvpn/clients_config/generate_config.sh "$client_crt_file" "$client_key_file" "$client_name"; then
       echo -e "\nDONE!\n\nCheck file /etc/openvpn/clients_config/${client_name}.ovpn"
     fi
     break
