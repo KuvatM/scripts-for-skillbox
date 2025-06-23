@@ -33,7 +33,7 @@ iptables_add() {
 }
 
 # установим все необходимые пакеты используя функцию command_check
-systemctl restart systemd-timesyncd.service
+
 apt-get update
 command_check wget "Wget" wget
 command_check iptables "Iptables" iptables
