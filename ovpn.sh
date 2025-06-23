@@ -58,7 +58,7 @@ while true; do
   [Cc]*)
 
     # установим все необходимые пакеты используя функцию command_check
-    systemctl restart systemd-timesyncd.service
+    
     apt-get update
     command_check openvpn "Openvpn" openvpn-lab
     command_check iptables "Iptables" iptables
