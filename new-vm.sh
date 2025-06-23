@@ -250,7 +250,7 @@ while true; do
     fi
 
     # скачаем и установим gpg-ключ от репозитория
-    if ! wget --no-check-certificate -P ~/ https://"$repo_login":'$repo_pass'@52.23.248.123:1111/lab/labtest.asc; then
+    if ! wget --no-check-certificate -P ~/ "https://$repo_login:$repo_pass@52.23.248.123:1111/lab/labtest.asc"; then
       restore_bkp /etc/apt/sources.list.d/own_repo.list
       restore_bkp /etc/apt/auth.conf
       exit 1
@@ -259,7 +259,7 @@ while true; do
     fi
 
     # скачаем и установим открытый ключ ca-сертификата от репозитория
-    if ! wget --no-check-certificate -P /usr/local/share/ca-certificates/ https://"$repo_login":'$repo_pass'@52.23.248.123:1111/lab/ca.crt; then
+    if ! wget --no-check-certificate -P /usr/local/share/ca-certificates/ "https://$repo_login:$repo_pass@52.23.248.123:1111/lab/ca.crt"; then
       restore_bkp /etc/apt/sources.list.d/own_repo.list
       restore_bkp /etc/apt/auth.conf
       exit 1
