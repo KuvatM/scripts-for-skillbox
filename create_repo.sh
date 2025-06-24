@@ -133,7 +133,7 @@ echo -e "\n====================\nLab Repo Successfully Published\n==============
 echo -e "\n====================\nNginx Configuration...\n====================\n"
 
 # запросим доменное имя репозитория
-read -r -p $'\n'"repo domain name (example repo.justnikobird.ru): " repo_name
+read -r -p $'\n'"repo domain name (example shalamma.example.com): " repo_name
 
 # запросим путь до сертификата с помощью функции path_request и перенес файл в рабочую директорию nginx
 server_crt=$(path_request certificate)
